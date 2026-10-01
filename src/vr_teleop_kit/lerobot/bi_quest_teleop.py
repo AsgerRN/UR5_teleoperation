@@ -720,7 +720,7 @@ class BiQuestTeleoperator(Teleoperator):
         state. Used by every re-anchor path — rising-edge engage,
         stale-recovery, precision-scale toggle, rest-ramp completion —
         same math, different log label."""
-        ee_pos, ee_quat = arm["solver"].fk(arm["qpos"])
+        ee_pos, ee_quat = arm["solver"].fk(arm["qpos"][:ARM_DOFS])
         j4_pos = arm["solver"].j4_anchor_xpos()
         if yaw_now is not None:
             R_engage = self._r_calib @ _R_y(-yaw_now)
@@ -881,11 +881,11 @@ class BiQuestTeleoperator(Teleoperator):
         # If engaged, drive arm IK toward the controller-relative target.
         # The current EE pose enables the mapper's reach limits (FK at the
         # last commanded qpos; solve() re-runs FK at the seed anyway).
-        ee_pos_now, ee_quat_now = arm["solver"].fk(arm["qpos"])
+        ee_pos_now, ee_quat_now = arm["solver"].fk(arm["qpos"][:ARM_DOFS])
         out = arm["mapper"].target(pos, quat_wxyz, ee_pos_now, ee_quat_now)
         if out is not None:
             tgt_pos, tgt_quat = out
-            arm["qpos"][:ARM_DOFS] = arm["solver"].solve(tgt_pos, tgt_quat, arm["qpos"])
+            arm["qpos"][:ARM_DOFS] = arm["solver"].solve(tgt_pos, tgt_quat, arm["qpos"][:ARM_DOFS])
 
             # Haptic feedback: take the max of four signals, all 0..1.
             #  (a) limit_pressure (rad): joints clipped into their stops

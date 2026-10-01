@@ -73,27 +73,34 @@ def build_model_with_tool0_site(
     urdf_path: str | Path | None = None,
 ) -> tuple[mujoco.MjModel, mujoco.MjData]:
     spec = mujoco.MjSpec.from_file(str(resolve_urdf_path(urdf_path)))
-    link67 = spec.body("link6-7")
-    if link67 is None:
-        raise RuntimeError("link6-7 body not found in URDF spec")
-    link67.add_site(
+    
+    # --- 1. End Effector (tool0) ---
+    # Attach tool0 to the final UR5e link. 
+    # For UR5e, the origin of wrist_3_link is exactly at the flange, 
+    # so we can use a zero-offset identity quaternion.
+    wrist_3 = spec.body("wrist_3_link")
+    if wrist_3 is None:
+        raise RuntimeError("wrist_3_link body not found in URDF spec")
+        
+    wrist_3.add_site(
         name="tool0",
-        pos=TOOL0_OFFSET_XYZ.tolist(),
-        quat=rpy_to_wxyz(TOOL0_OFFSET_RPY).tolist(),
+        pos=[0.0, 0.0, 0.0],
+        quat=[1.0, 0.0, 0.0, 0.0],  # w, x, y, z identity
     )
-    # Position-task anchor. On link3-4 (upstream of joint 4 → fully
-    # wrist-invariant), 10 cm past joint 4's pivot along the link3→link4
-    # direction. Joint 4 URDF origin in link3-4 frame: (0.244, 0, 0.060),
-    # magnitude 0.251 m. Unit direction (0.972, 0, 0.239); 10 cm offset
-    # → (0.0972, 0, 0.0239). Anchor position: (0.3412, 0, 0.0839).
-    link34 = spec.body("link3-4")
-    if link34 is None:
-        raise RuntimeError("link3-4 body not found in URDF spec")
-    link34.add_site(
+    
+    # --- 2. Decoupled IK Anchor (j4_anchor) ---
+    # The DK1 uses this site on link 3 to calculate arm position independently 
+    # of wrist rotation. For the UR5e, the equivalent upstream link is the forearm.
+    forearm = spec.body("forearm_link")
+    if forearm is None:
+        raise RuntimeError("forearm_link body not found in URDF spec")
+        
+    forearm.add_site(
         name="j4_anchor",
-        pos=[0.3412, 0.0, 0.0839],
+        pos=[0.0, 0.0, 0.39225],       # Generic small offset so it's visible
         size=[0.015, 0.0, 0.0],     # 1.5 cm sphere
-        rgba=[1.0, 0.5, 0.0, 1.0],  # orange
+        rgba=[1.0, 0.5, 0.0, 1.0],  # Orange
     )
+    
     model = spec.compile()
     return model, mujoco.MjData(model)

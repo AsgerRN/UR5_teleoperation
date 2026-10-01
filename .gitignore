@@ -1,3 +1,7 @@
+.vscode/
+Log/
+
+
 # TLS material for the LAN transport — generated locally, never committed.
 certs/
 *.pem
