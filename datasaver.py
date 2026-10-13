@@ -39,6 +39,7 @@ class DataSaver:
     def __del__(self):
         if self.recording:
             self.dataset.save_episode() # type: ignore
+            self.dataset.finalize() # type: ignore
 
     def add_frame(self, robot_state: NDArray[np.float32], action: NDArray[np.float32], camera_frame: NDArray[np.uint8], language_instruction: str) -> None:
         
@@ -92,8 +93,8 @@ class DataSaverConcurrent(DataSaver):
                         if recording:
                             print("💾 Saving episode before shutdown...")
                             self.dataset.save_episode() # type: ignore
+                            self.dataset.finalize() # type: ignore
                             print("💾 Episode saved successfully.")
-                        self._queue.task_done()
                         break # Exit the infinite loop cleanly
 
                     case _:
@@ -138,19 +139,20 @@ class DataSaverConcurrent(DataSaver):
         if self._emptying_full_queue.is_set():
             print("⚠️ Queue is currently being emptied. Episode is automatically saved.")
             return
-
         print(f"💾 Saving episode... {(self._queue.maxsize - self._queue.qsize()) / 50:.1f} seconds left in the queue")
         self._queue.put(("save", None))
 
-    def __del__(self) -> None:
+    def shutdown(self) -> None:
+        print("Shutting down DataSaver...")
         if self._worker_thread.is_alive():
-            print("Shutting down DataSaver...")
+            print("Waiting for the worker thread to finish...")
             self._queue.put(("shutdown", None))
             self._worker_thread.join(timeout=self.queue_length)
+
+    def __del__(self) -> None:
+        self.shutdown()
         super().__del__()
 
-    # --- Properties ---
-    
     @property
     def queue_size(self) -> int:
         return self._queue.qsize()

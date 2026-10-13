@@ -14,7 +14,7 @@ def main():
     robot = UR5_Pi0(ur_ip)
 
     vr = VR(robot.pose)
-    data_saver = DataSaverConcurrent(save_folder="/mnt/big/teleop_data")
+    data_saver = DataSaverConcurrent(save_folder="/home/loever/Documents/teleop_data")
 
     
     print("\n========================================")
@@ -87,6 +87,7 @@ def main():
 
     except KeyboardInterrupt:
         print("\nStopping teleoperation...")
+        data_saver.shutdown()
 
 if __name__ == "__main__":
     main()
